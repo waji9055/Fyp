@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tourist ChatBot</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f7f9;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .chat-container {
+      background-color: #ffffff;
+      border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      width: 90%;
+      max-width: 500px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 20px;
+      font-size: 1.5rem;
+    }
+
+    .chat-box {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 400px;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 10px;
+      background-color: #fafafa;
+    }
+
+    .message {
+      padding: 10px 15px;
+      border-radius: 10px;
+      margin: 10px 0;
+      max-width: 80%;
+      word-wrap: break-word;
+      animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .user-message {
+      background-color: #d1e7dd;
+      align-self: flex-end;
+      color: #0f5132;
+    }
+
+    .bot-message {
+      background-color: #f8d7da;
+      align-self: flex-start;
+      color: #842029;
+    }
+
+    .input-container {
+      display: flex;
+      margin-top: 15px;
+    }
+
+    #user-input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    #send-btn {
+      margin-left: 10px;
+      padding: 10px 20px;
+      background-color: #0d6efd;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.3s ease;
+    }
+
+    #send-btn:hover {
+      background-color: #0b5ed7;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .typing-indicator {
+  display: inline-block;
+  margin: 10px 0;
+  padding: 10px 15px;
+  border-radius: 10px;
+  background-color: #f8d7da;
+  color: #842029;
+  font-style: italic;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.dots::after {
+  content: '';
+  display: inline-block;
+  animation: dot-flash 1.5s infinite steps(1);
+}
+
+@keyframes dot-flash {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75% { content: '...'; }
+  100% { content: ''; }
+}
+
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <h1>Welcome to the Northern Areas Tourist Guide</h1>
+    <div class="chat-box" id="chat-box">
+      <!-- Chat messages will appear here -->
+    </div>
+    <div class="input-container">
+      <input type="text" id="user-input" placeholder="Ask a question..." autocomplete="off" />
+      <button id="send-btn">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const chatBox = document.getElementById('chat-box');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+
+    // Function to append messages to the chat box
+    function appendMessage(content, className) {
+      const message = document.createElement('div');
+      message.classList.add('message', className);
+      message.textContent = content;
+      chatBox.appendChild(message);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // Function to handle sending messages
+    function sendMessage() {
+      const text = userInput.value.trim();
+      if (text === '') return;
+
+      appendMessage(text, 'user-message');
+      userInput.value = '';
+
+      fetch('/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ question: text })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.response) {
+          setTimeout(() => {
+            appendMessage(data.response, 'bot-message');
+          }, 500); // slight delay for natural feel
+        } else {
+          appendMessage('Sorry, something went wrong.', 'bot-message');
+        }
+      })
+      .catch(() => {
+        appendMessage('Error connecting to the server.', 'bot-message');
+      });
+    }
+
+    // Event listeners
+    sendBtn.addEventListener('click', sendMessage);
+    userInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+    });
+
+    function sendMessage() {
+  const text = userInput.value.trim();
+  if (text === '') return;
+
+  appendMessage(text, 'user-message');
+  userInput.value = '';
+
+  // Show typing indicator
+  const typingIndicator = document.createElement('div');
+  typingIndicator.classList.add('message', 'typing-indicator');
+  typingIndicator.innerHTML = '<span class="dots">Typing</span>';
+  chatBox.appendChild(typingIndicator);
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  fetch('/ask', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ question: text })
+  })
+  .then(response => response.json())
+  .then(data => {
+    typingIndicator.remove(); // Remove typing indicator
+    if (data.response) {
+      appendMessage(data.response, 'bot-message');
+    } else {
+      appendMessage('Sorry, something went wrong.', 'bot-message');
+    }
+  })
+  .catch(() => {
+    typingIndicator.remove();
+    appendMessage('Error connecting to the server.', 'bot-message');
+  });
+}
+
+  </script>
+</body>
+</html>
